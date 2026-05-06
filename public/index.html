@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LogiQ · Job Signal Scraper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0d;
+    --bg2: #141414;
+    --bg3: #1a1a1a;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e6e1;
+    --text2: #8a8680;
+    --text3: #555250;
+    --green: #1D9E75;
+    --green-dim: #0F6E56;
+    --green-glow: rgba(29,158,117,0.15);
+    --green-light: #9FE1CB;
+    --red: #E24B4A;
+  }
+
+  html, body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; }
+
+  /* ── LOGIN SCREEN ── */
+  #loginScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 0;
+  }
+
+  .login-box {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 2.5rem 2rem;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+
+  .login-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    text-transform: uppercase;
+  }
+
+  .login-input {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    height: 40px;
+    padding: 0 14px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+    letter-spacing: 0.1em;
+  }
+  .login-input:focus { border-color: var(--green); }
+
+  .login-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    height: 40px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    width: 100%;
+  }
+  .login-btn:hover { background: var(--green-dim); }
+
+  .login-error {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--red);
+    text-align: center;
+    display: none;
+  }
+  .login-error.show { display: block; }
+
+  /* ── MAIN APP ── */
+  #app { display: none; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+
+  .version { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text3); letter-spacing: 0.06em; }
+
+  .main { max-width: 900px; margin: 0 auto; padding: 2rem; }
+
+  .search-bar {
+    display: grid;
+    grid-template-columns: 1fr 220px auto;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  input[type=text], input[type=password], select {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    height: 38px;
+    padding: 0 14px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input::placeholder { color: var(--text3); }
+  input:focus, select:focus { border-color: var(--green); }
+  select option { background: var(--bg2); }
+
+  .run-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    height: 38px;
+    padding: 0 20px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+  }
+  .run-btn:hover { background: var(--green-dim); box-shadow: 0 0 12px var(--green-glow); }
+  .run-btn:disabled { background: #2a2a2a; color: var(--text3); cursor: not-allowed; box-shadow: none; }
+
+  .filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+    align-items: center;
+  }
+
+  .filter-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text3); letter-spacing: 0.1em; margin-right: 4px; }
+
+  .chip {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all 0.12s;
+  }
+  .chip:hover { border-color: var(--green); color: var(--green-light); }
+  .chip.active { background: var(--green-glow); border-color: var(--green); color: var(--green-light); }
+
+  .status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 0.65rem 0;
+    margin-bottom: 1rem;
+  }
+  .status .count { color: var(--green); font-weight: 500; }
+
+  .spinner {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border: 1.5px solid rgba(29,158,117,0.3);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .lead {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .lead:hover { border-color: var(--border2); }
+  .lead.open { border-color: rgba(29,158,117,0.3); }
+
+  .lead-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 14px 16px;
+    cursor: pointer;
+    background: var(--bg2);
+    gap: 12px;
+    align-items: center;
+  }
+  .lead-header:hover { background: var(--bg3); }
+
+  .lead-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 5px; }
+  .lead-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .lead-role-tag { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text2); }
+
+  .tag { font-family: 'IBM Plex Mono', monospace; font-size: 9px; padding: 2px 7px; border-radius: 100px; letter-spacing: 0.04em; font-weight: 500; }
+  .tag-sector { background: rgba(23,77,163,0.2); color: #85B7EB; border: 1px solid rgba(55,138,221,0.2); }
+  .tag-loc { background: rgba(100,100,90,0.2); color: var(--text2); border: 1px solid var(--border2); }
+  .tag-ready { background: rgba(29,158,117,0.15); color: var(--green-light); border: 1px solid rgba(29,158,117,0.3); }
+
+  .lead-btns { display: flex; gap: 6px; flex-shrink: 0; }
+
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg3); color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .btn.green { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn.green:hover { background: var(--green-dim); }
+
+  .lead-body { display: none; padding: 0 16px 16px; background: var(--bg2); border-top: 1px solid var(--border); }
+  .lead-body.open { display: block; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 0 12px; }
+
+  .info-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+  .info-box-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-bottom: 6px; }
+  .info-box-text { font-size: 12px; line-height: 1.65; color: var(--text2); }
+
+  .email-box { background: var(--bg3); border: 1px solid rgba(29,158,117,0.2); border-radius: 6px; padding: 14px; margin-top: 4px; }
+  .email-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .email-subject { font-size: 12px; font-weight: 500; color: var(--green-light); font-family: 'IBM Plex Mono', monospace; }
+  .email-body-text { font-size: 13px; line-height: 1.75; color: var(--text2); white-space: pre-line; }
+
+  .generating { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--green); padding: 12px 0; display: none; }
+  .generating.active { display: flex; align-items: center; gap: 8px; }
+
+  .empty { text-align: center; padding: 4rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text3); line-height: 2; }
+  .copied { color: var(--green) !important; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo"><div class="dot"></div>LogiQ · Job Scraper</div>
+    <div>
+      <div class="login-label" style="margin-bottom:8px">Password</div>
+      <input class="login-input" type="password" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <button class="login-btn" onclick="login()">ENTER</button>
+    <div class="login-error" id="loginError">Incorrect password</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="logo"><div class="dot"></div>LogiQ · Job Signal Scraper</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span class="version">v1.0</span>
+      <button class="btn" onclick="logout()" style="font-size:10px;padding:3px 10px">logout</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="search-bar">
+      <input type="text" id="roleInput" placeholder="Role e.g. admin, office manager, operations coordinator" value="admin">
+      <input type="text" id="locInput" placeholder="Location e.g. Birmingham, UK" value="Birmingham, UK">
+      <button class="run-btn" id="runBtn" onclick="runSearch()">▶ RUN SEARCH</button>
+    </div>
+
+    <div class="filters">
+      <span class="filter-label">FILTER:</span>
+      <button class="chip active" onclick="setFilter(this,'all')">All</button>
+      <button class="chip" onclick="setFilter(this,'dental')">Dental</button>
+      <button class="chip" onclick="setFilter(this,'estate agent')">Estate Agents</button>
+      <button class="chip" onclick="setFilter(this,'construction')">Construction</button>
+      <button class="chip" onclick="setFilter(this,'logistics')">Logistics</button>
+      <button class="chip" onclick="setFilter(this,'accountancy')">Accountancy</button>
+      <button class="chip" onclick="setFilter(this,'manufacturing')">Manufacturing</button>
+    </div>
+
+    <div class="status" id="status">
+      <span>READY · enter a role keyword and run</span>
+    </div>
+
+    <div id="leads">
+      <div class="empty">No leads yet<br><span style="font-size:10px;opacity:0.5">Recruitment agencies filtered automatically</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LOGIQ = `LogiQ is a Birmingham-based workflow automation company — a "Digital Employee" for UK SMEs.
+Products: LogiQ Core £695/mo (automates admin workflows), LogiQ Agent £1,295/mo (full autonomous capability).
+We solve: manual data entry, chasing clients/suppliers for docs, compliance deadline tracking, onboarding, payroll admin.
+Target: owner-operated UK SMEs, 5–200 staff. Founder is Hamza.
+Tone: direct, no jargon, lead with the problem, never say "AI" or "automation software" — say "Digital Employee".`;
+
+let leads = [];
+let activeFilter = 'all';
+let expanded = null;
+let appPassword = '';
+
+function login() {
+  const pw = document.getElementById('pwInput').value;
+  if (!pw) return;
+  appPassword = pw;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+function logout() {
+  appPassword = '';
+  leads = [];
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('pwInput').value = '';
+}
+
+function setFilter(el, val) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = val;
+  render();
+}
+
+async function callClaude(payload) {
+  const r = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-app-password': appPassword },
+    body: JSON.stringify(payload)
+  });
+  if (r.status === 401) {
+    logout();
+    document.getElementById('loginError').classList.add('show');
+    throw new Error('Unauthorised');
+  }
+  if (!r.ok) throw new Error(`Server error ${r.status}`);
+  return r.json();
+}
+
+async function runSearch() {
+  const role = document.getElementById('roleInput').value.trim() || 'admin';
+  const loc = document.getElementById('locInput').value.trim() || 'UK';
+  const btn = document.getElementById('runBtn');
+  const status = document.getElementById('status');
+
+  btn.disabled = true;
+  btn.textContent = '...';
+  status.innerHTML = '<span class="spinner"></span><span style="color:var(--green);font-family:\'IBM Plex Mono\',monospace;font-size:11px;">Searching job boards for live signals...</span>';
+
+  try {
+    const data = await callClaude({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      system: `You are a lead researcher for LogiQ. Search for real UK companies (NOT recruitment agencies) currently advertising for "${role}" roles in ${loc}.
+
+Return ONLY a JSON array (no markdown, no preamble, no backticks). Up to 6 results. Each object:
+- id: number
+- company: company name
+- role: exact job title
+- location: city/region
+- sector: one of [dental, estate agent, construction, logistics, accountancy, manufacturing, other]
+- size_hint: estimated headcount or "unknown"
+- website: company website URL if findable, else ""
+- jd_summary: 2-3 sentences on what the role involves and what pain that signals
+- signal: one sentence on why this is a good LogiQ prospect
+
+EXCLUDE: recruitment agencies, staffing firms, NHS, charities, large corporates (500+ staff), job boards.
+Return ONLY valid JSON array.`,
+      messages: [{ role: 'user', content: `Find UK SMEs in ${loc} hiring "${role}" now. Return JSON only.` }]
+    });
+
+    const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const match = text.replace(/```json|```/g, '').match(/\[[\s\S]*\]/);
+    leads = match ? JSON.parse(match[0]).map((l, i) => ({ ...l, id: i, emailDone: false, email: '', subject: '' })) : [];
+
+    status.innerHTML = `<span class="count">${leads.length} LEADS</span><span> · agency-filtered · click a row to expand · hit "draft email" per lead</span>`;
+    render();
+  } catch (e) {
+    if (e.message !== 'Unauthorised') {
+      status.innerHTML = `<span style="color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px;">Error: ${e.message}</span>`;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '▶ RUN SEARCH';
+}
+
+function render() {
+  const container = document.getElementById('leads');
+  const filtered = activeFilter === 'all' ? leads : leads.filter(l => l.sector === activeFilter);
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty">${leads.length ? 'No leads in this sector' : 'No leads yet<br><span style="font-size:10px;opacity:0.5">Recruitment agencies filtered automatically</span>'}</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(l => `
+    <div class="lead ${expanded === l.id ? 'open' : ''}" id="lead-${l.id}">
+      <div class="lead-header" onclick="toggle(${l.id})">
+        <div>
+          <div class="lead-name">${l.company}</div>
+          <div class="lead-meta">
+            <span class="lead-role-tag">${l.role}</span>
+            ${l.sector ? `<span class="tag tag-sector">${l.sector}</span>` : ''}
+            ${l.location ? `<span class="tag tag-loc">${l.location}</span>` : ''}
+            ${l.emailDone ? '<span class="tag tag-ready">email ready</span>' : ''}
+          </div>
+        </div>
+        <div class="lead-btns">
+          <button class="btn green" onclick="event.stopPropagation(); draftEmail(${l.id})">${l.emailDone ? '↻ regen' : '✉ draft email'}</button>
+          ${l.website ? `<button class="btn" onclick="event.stopPropagation(); window.open('${l.website}','_blank')">↗ site</button>` : ''}
+        </div>
+      </div>
+      <div class="lead-body ${expanded === l.id ? 'open' : ''}" id="body-${l.id}">
+        <div class="info-grid">
+          <div class="info-box">
+            <div class="info-box-label">JD signals</div>
+            <div class="info-box-text">${l.jd_summary || '—'}</div>
+          </div>
+          <div class="info-box">
+            <div class="info-box-label">Why LogiQ fits</div>
+            <div class="info-box-text">${l.signal || '—'}${l.size_hint && l.size_hint !== 'unknown' ? `<br><br><span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--text3)">SIZE ~${l.size_hint}</span>` : ''}</div>
+          </div>
+        </div>
+        <div class="generating" id="gen-${l.id}"><span class="spinner"></span>Writing from JD...</div>
+        <div id="email-${l.id}">${l.emailDone ? emailHTML(l) : ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function emailHTML(l) {
+  return `<div class="email-box">
+    <div class="email-top">
+      <div class="email-subject">Subject: ${l.subject}</div>
+      <button class="btn" onclick="copyEmail(${l.id})" id="copybtn-${l.id}">copy</button>
+    </div>
+    <div class="email-body-text">${l.email}</div>
+  </div>`;
+}
+
+function toggle(id) {
+  expanded = expanded === id ? null : id;
+  render();
+}
+
+async function draftEmail(id) {
+  const lead = leads.find(l => l.id === id);
+  if (!lead) return;
+
+  expanded = id;
+  render();
+
+  const genEl = document.getElementById(`gen-${id}`);
+  const emailEl = document.getElementById(`email-${id}`);
+  if (genEl) genEl.classList.add('active');
+  if (emailEl) emailEl.innerHTML = '';
+
+  try {
+    const data = await callClaude({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 600,
+      system: `You write short cold outreach emails for Hamza, founder of LogiQ.
+
+${LOGIQ}
+
+Rules:
+- Open by acknowledging they're hiring (natural, not weird)
+- Connect the hiring pain to what LogiQ replaces
+- 4-5 sentences max, no waffle
+- Soft CTA: offer a 15-min demo
+- Sign off: Hamza, LogiQ (logiq.co.uk)
+- First line: SUBJECT: [your subject line]
+- Then blank line, then email body
+- No preamble, no explanation, just the email`,
+      messages: [{
+        role: 'user',
+        content: `Company: ${lead.company}\nHiring for: ${lead.role}\nSector: ${lead.sector}\nLocation: ${lead.location}\nJD context: ${lead.jd_summary}\n\nWrite the cold email.`
+      }]
+    });
+
+    const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    const lines = text.split('\n');
+    let subject = '', body = '';
+
+    if (lines[0].toUpperCase().startsWith('SUBJECT:')) {
+      subject = lines[0].replace(/^SUBJECT:\s*/i, '').trim();
+      body = lines.slice(2).join('\n').trim();
+    } else {
+      subject = `A thought on your ${lead.role} search`;
+      body = text;
+    }
+
+    lead.email = body;
+    lead.subject = subject;
+    lead.emailDone = true;
+
+    if (genEl) genEl.classList.remove('active');
+    if (emailEl) emailEl.innerHTML = emailHTML(lead);
+
+    const leadEl = document.getElementById(`lead-${id}`);
+    if (leadEl) {
+      const meta = leadEl.querySelector('.lead-meta');
+      if (meta && !meta.querySelector('.tag-ready')) {
+        const t = document.createElement('span');
+        t.className = 'tag tag-ready';
+        t.textContent = 'email ready';
+        meta.appendChild(t);
+      }
+    }
+  } catch (e) {
+    if (genEl) genEl.classList.remove('active');
+    if (emailEl && e.message !== 'Unauthorised') {
+      emailEl.innerHTML = `<p style="font-size:12px;color:var(--red);padding:8px 0">Error: ${e.message}</p>`;
+    }
+  }
+}
+
+function copyEmail(id) {
+  const lead = leads.find(l => l.id === id);
+  if (!lead) return;
+  navigator.clipboard.writeText(`Subject: ${lead.subject}\n\n${lead.email}`).then(() => {
+    const btn = document.getElementById(`copybtn-${id}`);
+    if (btn) { btn.textContent = 'copied ✓'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000); }
+  });
+}
+</script>
+</body>
+</html>
